@@ -1,4 +1,6 @@
+import os
 import msvcrt
+
 
 def lock_file(f):
     msvcrt.locking(f.fileno(), msvcrt.LK_RLCK, 1)
