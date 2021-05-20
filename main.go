@@ -1,18 +1,19 @@
 package main
 
 import (
+	"fmt"
 	"log"
+	"net/http"
 	"os"
 	"runtime"
 	"strconv"
 	"time"
 )
 
+var fname string = getEnv("APP_T_FILE_NAME", "tmp")
+var port string = getEnv("APP_PORT", "8080")
+
 func main() {
-	var fname, ok = os.LookupEnv("APP_T_FILE_NAME")
-	if !ok {
-		log.Fatal("No APP_T_FILE_NAME env var set")
-	}
 	log.Println(fname)
 	if _, err := os.Stat(fname); os.IsNotExist(err) {
 		f, err := os.Create(fname)
@@ -23,9 +24,10 @@ func main() {
 		f.Close()
 	}
 
-	write_loop(fname)
-
-	log.Println("done")
+	go write_loop(fname)
+	http.HandleFunc("/", handler)
+	fmt.Println("Server started at port " + port)
+	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
 
 func write_loop(name string) {
@@ -40,7 +42,7 @@ func write_loop(name string) {
 		log.Println("No " + key + " env var set")
 	}
 
-	f, err := os.OpenFile(name, os.O_RDWR, 0666)
+	f, err := os.OpenFile(name, os.O_APPEND|os.O_WRONLY, 0644)
 
 	if err != nil {
 		log.Fatal("Cannot open file", err)
@@ -56,4 +58,17 @@ func write_loop(name string) {
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func handler(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "OK\n")
+}
+
+// Simple helper function to read an environment or return a default value
+func getEnv(key string, defaultVal string) string {
+	if value, exists := os.LookupEnv(key); exists {
+		return value
+	}
+
+	return defaultVal
 }
