@@ -26,6 +26,7 @@ func main() {
 
 	go write_loop(fname)
 	http.HandleFunc("/", handler)
+	http.HandleFunc("/cpu", cpuLoadHandler)
 	fmt.Println("Server started at port " + port)
 	log.Fatal(http.ListenAndServe(":"+port, nil))
 }
@@ -64,6 +65,11 @@ func handler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprintf(w, "OK\n")
 }
 
+func cpuLoadHandler(w http.ResponseWriter, r *http.Request) {
+	RunCPULoad(2, 5, 100)
+	fmt.Fprintf(w, "CPU LOAD\n")
+}
+
 // Simple helper function to read an environment or return a default value
 func getEnv(key string, defaultVal string) string {
 	if value, exists := os.LookupEnv(key); exists {
@@ -71,4 +77,38 @@ func getEnv(key string, defaultVal string) string {
 	}
 
 	return defaultVal
+}
+
+// RunCPULoad run CPU load in specify cores count and percentage
+func RunCPULoad(coresCount int, timeSeconds int, percentage int) {
+	runtime.GOMAXPROCS(coresCount)
+
+	// second     ,s  * 1
+	// millisecond,ms * 1000
+	// microsecond,μs * 1000 * 1000
+	// nanosecond ,ns * 1000 * 1000 * 1000
+	// every loop : run + sleep = 1 unit
+	// 1 unit = 100 ms may be the best
+	unitHundresOfMicrosecond := 1000
+	runMicrosecond := unitHundresOfMicrosecond * percentage
+	sleepMicrosecond := unitHundresOfMicrosecond*100 - runMicrosecond
+	for i := 0; i < coresCount; i++ {
+		go func() {
+			runtime.LockOSThread()
+			// endless loop
+			for {
+				begin := time.Now()
+				for {
+					// run 100%
+					if time.Now().Sub(begin) > time.Duration(runMicrosecond)*time.Microsecond {
+						break
+					}
+				}
+				// sleep
+				time.Sleep(time.Duration(sleepMicrosecond) * time.Microsecond)
+			}
+		}()
+	}
+	// how long
+	time.Sleep(time.Duration(timeSeconds) * time.Second)
 }
