@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var fname string = getEnv("APP_T_FILE_NAME", "tmp")
+var fname string = getEnv("APP_T_FILE_NAME", "logfile.log")
 var port string = getEnv("APP_PORT", "8080")
 
 func main() {
